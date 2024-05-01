@@ -18,7 +18,6 @@ class HeatingOptimizer(hass.Hass):
         else:
             self.switch_turn_off()
 
-
     def get_todays_prices(self) -> list:
         return self.entities.sensor.nordpool_kwh_fi_eur_3_10_024.attributes.today
 

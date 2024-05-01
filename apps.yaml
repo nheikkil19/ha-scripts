@@ -1,7 +1,3 @@
-# hello_world:
-#   module: hello
-#   class: HelloWorld
-
 heating_optimizer:
   module: heating_optimizer
   class: HeatingOptimizer
