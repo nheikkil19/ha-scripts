@@ -8,21 +8,19 @@ class HeatingOptimizer(hass.Hass):
         self.heating_switch = "switch.bathroom_switch"
 
         start_time = self.get_start_time()
+        self.check_and_control_heating({})
         self.run_every(self.check_and_control_heating, start=start_time, interval=3600)
         # self.run_every(self.check_and_control_heating, start="now", interval=60)
 
     def check_and_control_heating(self, kwargs):
         self.log("Checking and controlling heating")
-        if self.is_nth_cheapest_hour(0):
+        if self.is_nth_cheapest_hour(6):
             self.switch_turn_on()
         else:
             self.switch_turn_off()
 
     def get_todays_prices(self) -> list:
         return self.entities.sensor.nordpool_kwh_fi_eur_3_10_024.attributes.today
-
-    def get_tomorrows_prices(self) -> list:
-        return self.entities.sensor.nordpool_kwh_fi_eur_3_10_024.attributes.tomorrow
 
     def get_current_price(self) -> float:
         current_hour = self.get_current_datetime().hour
