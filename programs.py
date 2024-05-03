@@ -17,7 +17,12 @@ class TotalCheapest(BaseProgram):
 
     def evaluate(self) -> tuple[list[bool], int]:
         schedule = [False] * len(self.prices)
-        nth_cheapest = sorted(self.prices)[self.n - 1] if self.n > 0 else -float("inf")
+        sorted_prices = sorted(self.prices)
+        if self.n <= 0:
+            return schedule, 0
+        elif len(sorted_prices) < self.n:
+            return [True] * len(schedule), sum(sorted_prices)
+        nth_cheapest = sorted_prices[self.n - 1]
         cost = 0
         count = 0
         for i, price in enumerate(self.prices):
@@ -33,8 +38,8 @@ class TotalCheapest(BaseProgram):
 class Sections(BaseProgram):
     def __init__(self, prices: list, section_lengths: list, on_hours: list):
         super().__init__(prices)
-        if sum(section_lengths) != 24:
-            raise ValueError("Sum of section lengths must be 24")
+        if sum(section_lengths) != len(prices):
+            raise ValueError("Sum of section lengths must be equal to the number of prices")
         if len(on_hours) != len(section_lengths):
             raise ValueError("Need to specify on hours for each section length")
 
