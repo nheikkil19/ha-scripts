@@ -20,7 +20,7 @@ class TotalCheapest(BaseProgram):
         # raise NotImplementedError("Implement me!")
         super().__init__(prices)
         self._on_hours = n
-        self._name = "TotalCheapest"
+        self._name = "Total cheapest"
 
     def evaluate(self) -> tuple[list[bool], int]:
         schedule = [False] * len(self._prices)

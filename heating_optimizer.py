@@ -55,6 +55,8 @@ class HeatingOptimizer(hass.Hass):
         self.log(f"Selected program: {selected_name}")
         self.schedule = selected_schedule
 
+        self.update_data("On", selected_schedule, selected_name, min_cost)
+
     def should_turn_on(self):
         current_hour = self.get_datetime_now().hour
         return self.schedule[current_hour]
@@ -91,3 +93,12 @@ class HeatingOptimizer(hass.Hass):
                 log_str += f"{i}, "
         log_str = log_str[:-2]
         self.log(log_str)
+
+    def update_data(self, state, schedule, name, total_cost):
+        sensor_name = "sensor.heating_optimizer"
+        on_hours = [i for i, on in enumerate(schedule) if on]
+        self.set_state(sensor_name, state=state, attributes={
+            "name": name,
+            "total_cost": total_cost,
+            "on_hours": on_hours
+        })
