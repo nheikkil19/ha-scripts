@@ -3,7 +3,8 @@ import sys
 import os
 
 sys.path.append(os.path.dirname(__file__) + "/../")
-from programs import TotalCheapest, Sections
+from programs import TotalCheapest, Sections  # noqa: E402
+
 
 class TotalCheapestTests(unittest.TestCase):
     def test_evaluate_returns_correct_result(self):
@@ -57,6 +58,7 @@ class SectionsTests(unittest.TestCase):
         result = program.name
         expected_result = "Sections"
         self.assertEqual(result, expected_result)
+
 
 if __name__ == "__main__":
     unittest.main()

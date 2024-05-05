@@ -41,11 +41,14 @@ class TotalCheapest(BaseProgram):
                 schedule[i] = True
         return schedule, cost
 
+
 class Sections(BaseProgram):
     def __init__(self, prices: list, section_lengths: list, on_hours: list):
         super().__init__(prices)
         if sum(section_lengths) != len(prices):
-            raise ValueError("Sum of section lengths must be equal to the number of prices")
+            raise ValueError(
+                "Sum of section lengths must be equal to the number of prices"
+            )
         if len(on_hours) != len(section_lengths):
             raise ValueError("Need to specify on hours for each section length")
 
@@ -60,7 +63,7 @@ class Sections(BaseProgram):
         previous_section_end = 0
         for section_length, on_hour in zip(self._section_lengths, self._on_hours):
             section_prices = self._prices[
-                previous_section_end : previous_section_end + section_length
+                previous_section_end : previous_section_end + section_length # noqa E203
             ]
             section = TotalCheapest(section_prices, on_hour)
             section_schedule, cost = section.evaluate()

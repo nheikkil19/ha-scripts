@@ -116,4 +116,3 @@ class HeatingOptimizer(hass.Hass):
             self.log("Automation turned off")
             self.switch_turn_off()
             self.set_state("sensor.heating_optimizer", state="off")
-
