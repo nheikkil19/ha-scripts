@@ -27,7 +27,7 @@ class TotalCheapestTests(unittest.TestCase):
         n = 3
         program = TotalCheapest(prices, n)
         result = program.name
-        expected_result = "TotalCheapest"
+        expected_result = "Total cheapest"
         self.assertEqual(result, expected_result)
 
 

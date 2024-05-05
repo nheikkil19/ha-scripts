@@ -12,10 +12,13 @@ class HeatingOptimizer(hass.Hass):
 
     def initialize(self):
         self.heating_switch = "switch.bathroom_switch"
+        self.input_boolean_name = "input_boolean.heating_automation"
         self.nordpool_data = self.entities.sensor.nordpool_kwh_fi_eur_3_10_024
 
         start_time = self.get_start_time()
         self.log(f"Start time: {start_time}")
+
+        self.listen_state(self.automation_state_changed, self.input_boolean_name)
 
         self.select_daily_program({})
         self.run_at(self.select_daily_program, start="00:00:30")
@@ -27,7 +30,7 @@ class HeatingOptimizer(hass.Hass):
     def check_and_control_heating(self, kwargs):
         self.log("Checking and controlling heating")
         self.print_schedule(self.schedule)
-        if self.should_turn_on():
+        if self.should_turn_on() and self.get_state(self.input_boolean_name) == "on":
             self.switch_turn_on()
         else:
             self.switch_turn_off()
@@ -55,7 +58,7 @@ class HeatingOptimizer(hass.Hass):
         self.log(f"Selected program: {selected_name}")
         self.schedule = selected_schedule
 
-        self.update_data("On", selected_schedule, selected_name, min_cost)
+        self.update_data(selected_schedule, selected_name, min_cost)
 
     def should_turn_on(self):
         current_hour = self.get_datetime_now().hour
@@ -94,11 +97,23 @@ class HeatingOptimizer(hass.Hass):
         log_str = log_str[:-2]
         self.log(log_str)
 
-    def update_data(self, state, schedule, name, total_cost):
+    def update_data(self, schedule, name, total_cost):
         sensor_name = "sensor.heating_optimizer"
+        state = "on" if self.get_state(self.input_boolean_name) == "on" else "off"
         on_hours = [i for i, on in enumerate(schedule) if on]
         self.set_state(sensor_name, state=state, attributes={
             "name": name,
             "total_cost": total_cost,
             "on_hours": on_hours
         })
+
+    def automation_state_changed(self, entity, attribute, old, new, kwargs):
+        if new == "on":
+            self.log("Automation turned on")
+            self.check_and_control_heating({})
+            self.set_state("sensor.heating_optimizer", state="on")
+        else:
+            self.log("Automation turned off")
+            self.switch_turn_off()
+            self.set_state("sensor.heating_optimizer", state="off")
+
