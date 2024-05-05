@@ -22,6 +22,14 @@ class TotalCheapestTests(unittest.TestCase):
         expected_result = ([], 0)
         self.assertEqual(result, expected_result)
 
+    def test_name_returns_correct_name(self):
+        prices = [10, 20, 30, 40, 50]
+        n = 3
+        program = TotalCheapest(prices, n)
+        result = program.name
+        expected_result = "TotalCheapest"
+        self.assertEqual(result, expected_result)
+
 
 class SectionsTests(unittest.TestCase):
     def test_evaluate_returns_correct_result(self):
@@ -40,6 +48,15 @@ class SectionsTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             program = Sections(prices, section_lengths, on_hours)
             program.evaluate()
+
+    def test_name_returns_correct_name(self):
+        prices = [10, 20, 30, 40, 50]
+        section_lengths = [2, 3]
+        on_hours = [1, 4]
+        program = Sections(prices, section_lengths, on_hours)
+        result = program.name
+        expected_result = "Sections"
+        self.assertEqual(result, expected_result)
 
 if __name__ == "__main__":
     unittest.main()

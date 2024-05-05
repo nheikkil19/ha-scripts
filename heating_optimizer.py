@@ -1,7 +1,7 @@
 import appdaemon.plugins.hass.hassapi as hass
 from datetime import datetime, timedelta
 import pytz
-from programs import TotalCheapest, Sections
+from programs import BaseProgram, TotalCheapest, Sections
 
 TOTAL_CHEAPEST_HOURS = 8
 SECTION_LENGHTS = [3, 9, 9, 3]
@@ -35,21 +35,25 @@ class HeatingOptimizer(hass.Hass):
     def select_daily_program(self, kwargs):
         todays_prices = self.get_todays_prices()
 
-        total_cheapest = TotalCheapest(todays_prices, TOTAL_CHEAPEST_HOURS)
-        sections = Sections(todays_prices, SECTION_LENGHTS, ON_HOURS)
+        programs: list[BaseProgram] = [
+            TotalCheapest(todays_prices, TOTAL_CHEAPEST_HOURS),
+            Sections(todays_prices, SECTION_LENGHTS, ON_HOURS)
+        ]
 
-        total_cheapest_schedule, total_cheapest_cost = total_cheapest.evaluate()
-        sections_schedule, sections_cost = sections.evaluate()
+        min_cost = float('inf')
+        selected_schedule = None
 
-        self.log(f"Total cheapest cost: {total_cheapest_cost}")
-        self.log(f"Sections cost: {sections_cost}")
+        for program in programs:
+            schedule, cost = program.evaluate()
+            self.log(f"{program.name} cost: {cost}")
 
-        if total_cheapest_cost < sections_cost:
-            self.log("Selecting total cheapest program")
-            self.schedule = total_cheapest_schedule
-        else:
-            self.log("Selecting sections program")
-            self.schedule = sections_schedule
+            if cost < min_cost:
+                min_cost = cost
+                selected_schedule = schedule
+                selected_name = program.name
+
+        self.log(f"Selected program: {selected_name}")
+        self.schedule = selected_schedule
 
     def should_turn_on(self):
         current_hour = self.get_datetime_now().hour
