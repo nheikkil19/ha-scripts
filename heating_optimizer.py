@@ -1,5 +1,5 @@
 import appdaemon.plugins.hass.hassapi as hass
-from datetime import datetime, timedelta
+from datetime import datetime, time
 import pytz
 from programs import BaseProgram, TotalCheapest, Sections
 
@@ -11,20 +11,23 @@ ON_HOURS = [0, 3, 3, 0]
 class HeatingOptimizer(hass.Hass):
 
     def initialize(self):
+        self.prices_updated = datetime.min
+        self.todays_prices = []
         self.heating_switch = "switch.bathroom_switch"
         self.input_boolean_name = "input_boolean.heating_automation"
-        self.nordpool_data = self.entities.sensor.nordpool_kwh_fi_eur_3_10_024
-
-        start_time = self.get_start_time()
-        self.log(f"Start time: {start_time}")
+        self.nordpool_data = "sensor.nordpool_kwh_fi_eur_3_10_024"
 
         self.listen_state(self.automation_state_changed, self.input_boolean_name)
 
         self.select_daily_program({})
-        self.run_at(self.select_daily_program, start="00:00:30")
+        self.run_daily(
+            self.select_daily_program,
+            start=time(0, 0, 30),
+            constrain_input_boolean=self.input_boolean_name,
+        )
 
         self.check_and_control_heating({})
-        self.run_every(self.check_and_control_heating, start=start_time, interval=3600)
+        self.run_hourly(self.check_and_control_heating, start=time(0, 1, 0))
         # self.run_every(self.check_and_control_heating, start="now", interval=60)
 
     def check_and_control_heating(self, kwargs):
@@ -40,10 +43,10 @@ class HeatingOptimizer(hass.Hass):
 
         programs: list[BaseProgram] = [
             TotalCheapest(todays_prices, TOTAL_CHEAPEST_HOURS),
-            Sections(todays_prices, SECTION_LENGHTS, ON_HOURS)
+            Sections(todays_prices, SECTION_LENGHTS, ON_HOURS),
         ]
 
-        min_cost = float('inf')
+        min_cost = float("inf")
         selected_schedule = None
 
         for program in programs:
@@ -65,12 +68,14 @@ class HeatingOptimizer(hass.Hass):
         return self.schedule[current_hour]
 
     def get_todays_prices(self) -> list:
-        return self.nordpool_data.attributes.today
-
-    def get_start_time(self):
-        now = self.get_datetime_now()
-        start_time = now.replace(minute=1, second=0, microsecond=0) + timedelta(hours=1)
-        return start_time
+        if self.prices_updated.date() != self.get_datetime_now().date():
+            self.yesterday_prices = self.todays_prices
+            self.todays_prices = self.get_state(self.nordpool_data, attribute="today")
+            self.prices_updated = self.get_datetime_now()
+            self.log(f"New prices: {self.todays_prices}")
+            self.log(f"Prices updated: {self.prices_updated}")
+            assert self.yesterday_prices != self.todays_prices
+        return self.todays_prices
 
     def switch_turn_on(self):
         if self.get_state(self.heating_switch) == "off":
@@ -101,14 +106,15 @@ class HeatingOptimizer(hass.Hass):
         sensor_name = "sensor.heating_optimizer"
         state = "on" if self.get_state(self.input_boolean_name) == "on" else "off"
         on_hours = [i for i, on in enumerate(schedule) if on]
-        self.set_state(sensor_name, state=state, attributes={
-            "name": name,
-            "total_cost": total_cost,
-            "on_hours": on_hours
-        })
+        self.set_state(
+            sensor_name,
+            state=state,
+            attributes={"name": name, "total_cost": total_cost, "on_hours": on_hours},
+        )
 
     def automation_state_changed(self, entity, attribute, old, new, kwargs):
         if new == "on":
+            self.select_daily_program({})
             self.log("Automation turned on")
             self.check_and_control_heating({})
             self.set_state("sensor.heating_optimizer", state="on")
