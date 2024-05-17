@@ -31,8 +31,6 @@ class HeatingOptimizer(hass.Hass):
         # self.run_every(self.check_and_control_heating, start="now", interval=60)
 
     def check_and_control_heating(self, kwargs):
-        self.log("Checking and controlling heating")
-        self.print_schedule(self.schedule)
         if self.should_turn_on() and self.get_state(self.input_boolean_name) == "on":
             self.switch_turn_on()
         else:
@@ -60,6 +58,7 @@ class HeatingOptimizer(hass.Hass):
 
         self.log(f"Selected program: {selected_name}")
         self.schedule = selected_schedule
+        self.print_schedule(self.schedule)
 
         self.update_data(selected_schedule, selected_name, min_cost)
 
