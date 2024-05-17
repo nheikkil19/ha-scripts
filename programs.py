@@ -17,7 +17,6 @@ class BaseProgram(ABC):
 
 class TotalCheapest(BaseProgram):
     def __init__(self, prices: list, n: int):
-        # raise NotImplementedError("Implement me!")
         super().__init__(prices)
         self._on_hours = n
         self._name = "Total cheapest"
@@ -54,7 +53,7 @@ class Sections(BaseProgram):
 
         self._section_lengths = section_lengths
         self._on_hours = on_hours
-        self._name = "Sections"
+        self._name = ", ".join([f"{oh}/{l}" for oh, l in zip(on_hours, section_lengths)])
 
     def evaluate(self) -> tuple[list[bool], int]:
         schedule = [False] * len(self._prices)

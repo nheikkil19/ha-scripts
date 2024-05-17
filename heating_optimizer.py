@@ -2,20 +2,33 @@ import appdaemon.plugins.hass.hassapi as hass
 from datetime import datetime, time
 import pytz
 from programs import BaseProgram, TotalCheapest, Sections
+from config import CONFIG
 
-TOTAL_CHEAPEST_HOURS = 8
-SECTION_LENGHTS = [3, 9, 9, 3]
-ON_HOURS = [0, 3, 3, 0]
+# Example config in config.py:
+# CONFIG = {
+#     "heating_switch": "switch.bathroom_switch",  # The entity ID of the switch that controls the heating
+#     "input_boolean_name": "input_boolean.heating_automation",  # The entity ID of the input that controls the automation
+#     "optimizer_sensor": "sensor.heating_optimizer",  # The entity ID of the sensor that displays the optimization data
+#     "price_data": "sensor.nordpool_kwh_fi_eur_3_10_024",  # The entity ID of the sensor that provides the price data
+#     "offset": 1,  # An offset value to adjust the prices
+#     "cost_multiplier": 1,  # A multiplier based on power consumption
+#     "programs": [
+#         {"type": "section", "on_hours": [0, 3, 3, 0], "section_lengths": [3, 9, 9, 3]},
+#         {"type": "section", "on_hours": [8], "section_lengths": [24]},
+#     ],
+#     "time_zone": "Europe/Helsinki",  # The time zone used for the calculations
+# }
 
 
 class HeatingOptimizer(hass.Hass):
 
     def initialize(self):
+        self.config = CONFIG
         self.prices_updated = datetime.min
         self.todays_prices = []
-        self.heating_switch = "switch.bathroom_switch"
-        self.input_boolean_name = "input_boolean.heating_automation"
-        self.nordpool_data = "sensor.nordpool_kwh_fi_eur_3_10_024"
+        self.heating_switch = self.config["heating_switch"]
+        self.input_boolean_name = self.config["input_boolean_name"]
+        self.price_data = self.config["price_data"]
 
         self.listen_state(self.automation_state_changed, self.input_boolean_name)
 
@@ -38,17 +51,12 @@ class HeatingOptimizer(hass.Hass):
 
     def select_daily_program(self, kwargs):
         todays_prices = self.get_todays_prices()
-
-        programs: list[BaseProgram] = [
-            TotalCheapest(todays_prices, TOTAL_CHEAPEST_HOURS),
-            Sections(todays_prices, SECTION_LENGHTS, ON_HOURS),
-        ]
-
         min_cost = float("inf")
         selected_schedule = None
 
-        for program in programs:
+        for program in self.get_programs(todays_prices):
             schedule, cost = program.evaluate()
+            cost *= self.config.get("cost_multiplier", 1)
             self.log(f"{program.name} cost: {cost}")
 
             if cost < min_cost:
@@ -69,7 +77,7 @@ class HeatingOptimizer(hass.Hass):
     def get_todays_prices(self) -> list:
         if self.prices_updated.date() != self.get_datetime_now().date():
             self.yesterday_prices = self.todays_prices
-            self.todays_prices = self.get_state(self.nordpool_data, attribute="today")
+            self.todays_prices = self.get_state(self.price_data, attribute="today")
             self.prices_updated = self.get_datetime_now()
             self.log(f"New prices: {self.todays_prices}")
             self.log(f"Prices updated: {self.prices_updated}")
@@ -91,7 +99,7 @@ class HeatingOptimizer(hass.Hass):
             self.log("Heating is already off")
 
     def get_datetime_now(self):
-        return datetime.now(tz=pytz.timezone("Europe/Helsinki"))
+        return datetime.now(tz=pytz.timezone(self.config["time_zone"]))
 
     def print_schedule(self, schedule: list[bool]):
         log_str = "On hours: "
@@ -102,7 +110,7 @@ class HeatingOptimizer(hass.Hass):
         self.log(log_str)
 
     def update_data(self, schedule, name, total_cost):
-        sensor_name = "sensor.heating_optimizer"
+        sensor_name = self.config["optimizer_sensor"]
         state = "on" if self.get_state(self.input_boolean_name) == "on" else "off"
         on_hours = [i for i, on in enumerate(schedule) if on]
         self.set_state(
@@ -116,8 +124,24 @@ class HeatingOptimizer(hass.Hass):
             self.select_daily_program({})
             self.log("Automation turned on")
             self.check_and_control_heating({})
-            self.set_state("sensor.heating_optimizer", state="on")
+            self.set_state(self.config["optimizer_sensor"], state="on")
         else:
             self.log("Automation turned off")
             self.switch_turn_off()
-            self.set_state("sensor.heating_optimizer", state="off")
+            self.set_state(self.config["optimizer_sensor"], state="off")
+
+    def get_programs(self, prices: list) -> list[BaseProgram]:
+        programs = self.config["programs"]
+        offset = self.config.get("offset", 0)
+        prices = [price + offset for price in prices]
+        ret = []
+        for program in programs:
+            if program["type"] == "total_cheapest":
+                ret.append(TotalCheapest(prices, program["n"]))
+            elif program["type"] == "section":
+                ret.append(
+                    Sections(prices, program["section_lengths"], program["on_hours"])
+                )
+            else:
+                raise ValueError(f"Unknown program type: {program['type']}")
+        return ret

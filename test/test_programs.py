@@ -56,7 +56,7 @@ class SectionsTests(unittest.TestCase):
         on_hours = [1, 4]
         program = Sections(prices, section_lengths, on_hours)
         result = program.name
-        expected_result = "Sections"
+        expected_result = "1/2, 4/3"
         self.assertEqual(result, expected_result)
 
 
