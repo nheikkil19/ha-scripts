@@ -17,4 +17,3 @@ def get_network_devices() -> list:
 
 if __name__ == '__main__':
     print(get_network_devices())
-

@@ -2,10 +2,10 @@ import appdaemon.plugins.hass.hassapi as hass
 from datetime import datetime, time
 import pytz
 from programs import BaseProgram, TotalCheapest, Sections
-from config import CONFIG
+from config import HEATING_CONFIG, TIME_ZONE
 
 # Example config in config.py:
-# CONFIG = {
+# HEATING_CONFIG = {
 #     "heating_switch": "switch.bathroom_switch",  # The entity ID of the switch that controls the heating
 #     "input_boolean_name": "input_boolean.heating_automation",  # The entity ID of the input that controls the automation
 #     "optimizer_sensor": "sensor.heating_optimizer",  # The entity ID of the sensor that displays the optimization data
@@ -15,15 +15,14 @@ from config import CONFIG
 #     "programs": [
 #         {"type": "section", "on_hours": [0, 3, 3, 0], "section_lengths": [3, 9, 9, 3]},
 #         {"type": "section", "on_hours": [8], "section_lengths": [24]},
-#     ],
-#     "time_zone": "Europe/Helsinki",  # The time zone used for the calculations
+#     ]
 # }
 
 
 class HeatingOptimizer(hass.Hass):
 
     def initialize(self):
-        self.config = CONFIG
+        self.config = HEATING_CONFIG
         self.prices_updated = datetime.min
         self.todays_prices = []
         self.heating_switch = self.config["heating_switch"]
@@ -98,7 +97,7 @@ class HeatingOptimizer(hass.Hass):
             self.log("Heating is already off")
 
     def get_datetime_now(self):
-        return datetime.now(tz=pytz.timezone(self.config["time_zone"]))
+        return datetime.now(tz=pytz.timezone(TIME_ZONE))
 
     def print_schedule(self, schedule: list[bool]):
         log_str = "On hours: "
