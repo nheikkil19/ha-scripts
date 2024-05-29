@@ -2,3 +2,7 @@ heating_optimizer:
   module: heating_optimizer
   class: HeatingOptimizer
 
+
+presence_detection:
+  module: presence_detection
+  class: PresenceDetection
