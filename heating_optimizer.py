@@ -80,7 +80,6 @@ class HeatingOptimizer(hass.Hass):
             self.todays_prices = self.get_state(self.price_data, attribute="today")
             self.prices_updated = self.get_datetime_now()
             self.log(f"New prices: {self.todays_prices}")
-            self.log(f"Prices updated: {self.prices_updated}")
             assert self.yesterday_prices != self.todays_prices
         return self.todays_prices
 
