@@ -1,24 +1,31 @@
 import subprocess
-import re
+import time
 
 
-MAC_RE = r"MAC Address: ((?:[0-9A-Fa-f]{2}[:-]){5}(?:[0-9A-Fa-f]{2}))"
-
-
-def scan_network(ip: str, mask: int) -> str:
-    result = subprocess.run(['nmap', '-T4', '-F', f'{ip}/{mask}'], stdout=subprocess.PIPE)
-    return result.stdout.decode('utf-8')
-
-
-def get_network_devices(ip: str, mask: int) -> list:
-    devices = []
-    for line in scan_network(ip, mask).split('\n'):
+def get_ip_address(mac: str) -> str:
+    mac = mac.lower()
+    result = subprocess.run(["arp", "-a"], stdout=subprocess.PIPE)
+    for line in result.stdout.decode("utf-8").split("\n"):
         print(line)
-        m = re.match(MAC_RE, line)
-        if m:
-            devices.append(m.group(1))
-    return devices
+        if mac in line:
+            return line.split()[1].lower().strip("()")
+    return ""
 
 
-if __name__ == '__main__':
-    print(get_network_devices("192.168.1.0", 24))
+def ping(ip: str) -> bool:
+    result = subprocess.run(["ping", "-c", "1", ip], stdout=subprocess.PIPE)
+    return result.returncode == 0
+
+
+def is_device_present(mac: str, retry: int = 1) -> bool:
+    ip = get_ip_address(mac)
+    if ip:
+        for _ in range(retry):
+            if ping(ip):
+                return True
+            time.sleep(1)
+    return False
+
+
+if __name__ == "__main__":
+    print(is_device_present("AA:BB:CC:DD:EE:FF"))

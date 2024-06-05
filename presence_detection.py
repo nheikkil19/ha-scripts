@@ -28,13 +28,11 @@ class PresenceDetection(hass.Hass):
         # Implement logic to check if interesting device is in router devices
         presence = False
         self.log("Checking presence")
-        router_devices = router.get_network_devices(self.ip, self.mask)
-        # self.log(INTERESTING_DEVICES)
-        # self.log(router_devices)
-        for device in router_devices:
-            if device.lower() in self.interesting_devices:
-                self.log(f"{device} is present")
+        for device in self.interesting_devices:
+            if router.is_device_present(device, retry=3):
+                self.log(f"Device {device} is present")
                 presence = True
+
         if presence:
             if self.get_state(self.presence_sensor) != "home":
                 self.log("Presence set to home")
