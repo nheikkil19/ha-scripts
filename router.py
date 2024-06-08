@@ -25,7 +25,3 @@ def is_device_present(mac: str, retry: int = 1) -> bool:
                 return True
             time.sleep(1)
     return False
-
-
-if __name__ == "__main__":
-    print(is_device_present("AA:BB:CC:DD:EE:FF"))

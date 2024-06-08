@@ -7,7 +7,7 @@ class BaseProgram(ABC):
         self._name = ""
 
     @abstractmethod
-    def evaluate(self) -> list[bool]:
+    def evaluate(self) -> tuple[list[bool], int]:
         pass
 
     @property

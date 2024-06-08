@@ -1,8 +1,9 @@
-from datetime import datetime
+from datetime import time
+
 import appdaemon.plugins.hass.hassapi as hass
-import pytz
+
 import router
-from config import PRESENCE_CONFIG, TIME_ZONE
+from config import PRESENCE_CONFIG
 
 # PRESENCE_CONFIG = {
 #     "interesting_devices": [
@@ -21,16 +22,16 @@ class PresenceDetection(hass.Hass):
         self.ip = self.config["ip"]
         self.mask = self.config["mask"]
 
-        self.run_every(self.is_device_present, datetime.now(tz=pytz.timezone(TIME_ZONE)), 300)
+        self.run_minutely(self.is_device_present, start=time(0, 0, 0))
         self.is_device_present({})
 
     def is_device_present(self, kwargs):
         # Implement logic to check if interesting device is in router devices
         presence = False
-        self.log("Checking presence")
+        # self.log("Checking presence")
         for device in self.interesting_devices:
             if router.is_device_present(device, retry=3):
-                self.log(f"Device {device} is present")
+                # self.log(f"Device {device} is present")
                 presence = True
 
         if presence:

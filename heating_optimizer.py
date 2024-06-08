@@ -1,8 +1,10 @@
-import appdaemon.plugins.hass.hassapi as hass
 from datetime import datetime, time
+
+import appdaemon.plugins.hass.hassapi as hass
 import pytz
-from programs import BaseProgram, TotalCheapest, Sections
+
 from config import HEATING_CONFIG, TIME_ZONE
+from programs import BaseProgram, Sections, TotalCheapest
 
 # Example config in config.py:
 # HEATING_CONFIG = {

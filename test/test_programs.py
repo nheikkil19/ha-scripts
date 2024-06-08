@@ -1,9 +1,9 @@
-import unittest
-import sys
 import os
+import sys
+import unittest
 
 sys.path.append(os.path.dirname(__file__) + "/../")
-from programs import TotalCheapest, Sections  # noqa: E402
+from programs import Sections, TotalCheapest  # noqa: E402
 
 
 class TotalCheapestTests(unittest.TestCase):
