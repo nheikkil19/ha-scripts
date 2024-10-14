@@ -1,4 +1,5 @@
 from datetime import datetime, time
+from time import sleep
 
 import appdaemon.plugins.hass.hassapi as hass
 import pytz
@@ -78,10 +79,11 @@ class HeatingOptimizer(hass.Hass):
     def get_todays_prices(self) -> list:
         if self.prices_updated.date() != self.get_datetime_now().date():
             self.yesterday_prices = self.todays_prices
-            self.todays_prices = self.get_state(self.price_data, attribute="today")
-            self.prices_updated = self.get_datetime_now()
-            self.log(f"New prices: {self.todays_prices}")
-            assert self.yesterday_prices != self.todays_prices
+            while self.yesterday_prices == self.todays_prices:
+                self.todays_prices = self.get_state(self.price_data, attribute="today")
+                self.prices_updated = self.get_datetime_now()
+                self.log(f"New prices: {self.todays_prices}")
+                sleep(1)
         return self.todays_prices
 
     def switch_turn_on(self):
