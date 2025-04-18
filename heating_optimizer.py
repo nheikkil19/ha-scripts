@@ -87,9 +87,7 @@ class HeatingOptimizer(GenericHeatingOptimizer):
             if program["type"] == "total_cheapest":
                 ret.append(TotalCheapest(prices, program["n"]))
             elif program["type"] == "section":
-                ret.append(
-                    Sections(prices, program["section_lengths"], program["on_hours"])
-                )
+                ret.append(Sections(prices, program["section_lengths"], program["on_hours"]))
             else:
                 raise ValueError(f"Unknown program type: {program['type']}")
         return ret

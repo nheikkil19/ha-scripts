@@ -9,6 +9,7 @@ from time import sleep
 
 # TODO: Implement selecting between optimizers and making disabling global
 
+
 class GenericHeatingOptimizer(hass.Hass, ABC):
 
     def initialize(self):
@@ -28,39 +29,38 @@ class GenericHeatingOptimizer(hass.Hass, ABC):
     def is_automation_on(self) -> bool:
         return self.get_state(self.input_boolean_name) == "on"
 
-    # TODO: Combine these
-    def switch_turn_on(self):
-        if self.get_state(self.heating_switch) == "off":
-            self.log("Turning on heating")
+    def operate_switch(self, turn_on: bool):
+        state = "on" if turn_on else "off"
+        self.log(f"Turning {state} heating")
+
+        if self.get_state(self.heating_switch) == state:
+            self.log(f"Heating is already {state}")
+            return
+        elif turn_on:
             self.turn_on(self.heating_switch)
         else:
-            self.log("Heating is already on")
+            self.turn_off(self.heating_switch)
+
+    def switch_turn_on(self):
+        self.operate_switch(True)
 
     def switch_turn_off(self):
-        if self.get_state(self.heating_switch) == "on":
-            self.log("Turning off heating")
-            self.turn_off(self.heating_switch)
-        else:
-            self.log("Heating is already off")
+        self.operate_switch(False)
 
     def get_datetime_now(self):
         return datetime.now(tz=pytz.timezone(TIME_ZONE))
 
-    def get_prices(self, tomorrow: bool = False) -> list:
-        # TODO: Refactor this with for loop
+    def get_prices(self, tomorrow: bool = False, tomorrow_default: list = []) -> list:
         if self.prices_updated.date() != self.get_datetime_now().date():
             self.yesterday_prices = self.prices[:24]  # Used to check if prices are updated. Use only one day prices
-            attempts = 0
-            MAX_ATTEMPTS = 10  # Set a limit to the number of attempts
-            while self.yesterday_prices == self.prices and attempts < MAX_ATTEMPTS:
+            for _ in range(10):  # Set a limit to the number of attempts
                 self.prices = self.get_state(self.price_sensor, attribute="today")
+                if self.prices != self.yesterday_prices:  # Prices have changed
+                    if tomorrow:
+                        self.prices += self.get_state(self.price_sensor, attribute="tomorrow", default=tomorrow_default)
+                    self.prices_updated = self.get_datetime_now()
+                    self.log(f"New prices: {self.prices}")
+                    return self.prices
                 sleep(1)  # Wait for 1 second before trying again
-                attempts += 1
-            if attempts == MAX_ATTEMPTS:
-                self.error("Failed to get new prices after maximum attempts")
-            else:
-                if tomorrow:
-                    self.prices += self.get_state(self.price_sensor, attribute="tomorrow", default=[])
-                self.prices_updated = self.get_datetime_now()
-        self.log(f"New prices: {self.prices}")
+            self.error("Failed to get new prices after maximum attempts")
         return self.prices
