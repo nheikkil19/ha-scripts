@@ -4,7 +4,7 @@ from time import sleep
 import appdaemon.plugins.hass.hassapi as hass
 import pytz
 
-from config import HEATING_CONFIG, TIME_ZONE
+from config import get_heating_optimizer_config, TIME_ZONE
 from programs import BaseProgram, Sections, TotalCheapest
 
 # Example config in config.py:
@@ -25,7 +25,7 @@ from programs import BaseProgram, Sections, TotalCheapest
 class HeatingOptimizer(hass.Hass):
 
     def initialize(self):
-        self.config = HEATING_CONFIG
+        self.config = get_heating_optimizer_config()
         self.prices_updated = datetime.min
         self.todays_prices = []
         self.heating_switch = self.config["heating_switch"]
@@ -43,9 +43,10 @@ class HeatingOptimizer(hass.Hass):
 
         self.check_and_control_heating({})
         self.run_hourly(self.check_and_control_heating, start=time(0, 1, 0))
-        # self.run_every(self.check_and_control_heating, start="now", interval=60)
 
     def check_and_control_heating(self, kwargs):
+        self.config = get_heating_optimizer_config()
+        self.select_daily_program({})
         if self.should_turn_on() and self.get_state(self.input_boolean_name) == "on":
             self.switch_turn_on()
         else:
@@ -79,11 +80,16 @@ class HeatingOptimizer(hass.Hass):
     def get_todays_prices(self) -> list:
         if self.prices_updated.date() != self.get_datetime_now().date():
             self.yesterday_prices = self.todays_prices
-            while self.yesterday_prices == self.todays_prices:
+            attempts = 0
+            MAX_ATTEMPTS = 10  # Set a limit to the number of attempts
+            while self.yesterday_prices == self.todays_prices and attempts < MAX_ATTEMPTS:
                 self.todays_prices = self.get_state(self.price_data, attribute="today")
                 self.prices_updated = self.get_datetime_now()
                 self.log(f"New prices: {self.todays_prices}")
                 sleep(1)
+                attempts += 1
+            if attempts == MAX_ATTEMPTS:
+                self.log("Failed to get new prices after maximum attempts")
         return self.todays_prices
 
     def switch_turn_on(self):
