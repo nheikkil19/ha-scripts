@@ -6,3 +6,7 @@ heating_optimizer:
 presence_detection:
   module: presence_detection
   class: PresenceDetection
+
+mpc_heating:
+  module: mpc_heating
+  class: MpcHeating
