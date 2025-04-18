@@ -1,26 +1,23 @@
 import itertools
-import appdaemon.plugins.hass.hassapi as hass
 from datetime import time
-from heating_optimizer import HeatingOptimizer
-
 from config import get_heating_optimizer_config
+from generic_heating_optimizer import GenericHeatingOptimizer
 
 # Ideas for improvement:
 # - Update every 15 minutes
-# - Replace old heating optimizer or make abstract with basic functionality
 
 
-class MpcHeating(HeatingOptimizer):
+class MpcHeating(GenericHeatingOptimizer):
 
     def initialize(self):
         self.config = get_heating_optimizer_config()
-        self.price_data = self.config["price_data"]
+        self.price_sensor = self.config["price_sensor"]
         self.heating_switch = self.config["heating_switch"]
         # self.run_every(self.optimize_mpc, start=time(0, 1, 0), interval=60*15)
-        self.run_hourly(self.optimize_mpc, start=time(0, 1, 0))
-        self.optimize_mpc({})
+        self.run_hourly(self.update_state, start=time(0, 1, 0))
+        self.update_state({})
 
-    def optimize_mpc(self, kwargs):
+    def update_state(self, kwargs):
         horizon = 9
         min_temp = 22
         max_temp = 25
@@ -59,13 +56,12 @@ class MpcHeating(HeatingOptimizer):
 
         if best_schedule:
             self.log(f"Best schedule: {best_schedule}, Cost: {best_cost}")
-            self.schedule = best_schedule
-            self.print_schedule(self.schedule)
+            self.print_schedule(best_schedule)
         else:
             self.log("No valid schedule found")
 
         # Do first action
-        if self.schedule[0]:
+        if best_schedule[0]:
             self.switch_turn_on()
         else:
             self.switch_turn_off()
@@ -74,7 +70,16 @@ class MpcHeating(HeatingOptimizer):
         """
         Get today's and tomorrow's prices
         """
-        todays_prices = self.get_state(self.price_data, attribute="today")
-        tomorrow_prices = self.get_state(self.price_data, attribute="tomorrow", default=[])
+        todays_prices = self.get_state(self.price_sensor, attribute="today")
+        tomorrow_prices = self.get_state(self.price_sensor, attribute="tomorrow", default=[])
         self.log("Today's and tomorrow's prices: " + str(todays_prices + tomorrow_prices))
         return todays_prices + tomorrow_prices
+
+    def print_schedule(self, schedule: list[bool]):
+        log_str = "On hours: "
+        current_hour = self.get_datetime_now().hour
+        for i, on in enumerate(schedule):
+            if on:
+                log_str += f"{i + current_hour}, "
+        log_str = log_str[:-2]
+        self.log(log_str)
