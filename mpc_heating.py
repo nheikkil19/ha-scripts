@@ -1,12 +1,15 @@
 import itertools
 from datetime import time
-from generic_heating_optimizer import GenericHeatingOptimizer
+
+from generic_heating_optimizer import GenericHeatingOptimizer, benchmark_function
 
 # Ideas for improvement:
 # - Update every 15 minutes
 # - Add daily cost
 
-HORIZON = 12
+ENABLED = True
+
+HORIZON = 18
 MIN_TEMP = 22
 MAX_TEMP = 25
 COOLING_RATE = 0.2  # °C/h
@@ -17,14 +20,15 @@ class MpcHeating(GenericHeatingOptimizer):
 
     def initialize(self):
         super().initialize()
-        # self.run_every(self.optimize_mpc, start=time(0, 1, 0), interval=60*15)
-        self.run_hourly(self.update_state, start=time(0, 1, 0))
-        self.update_state({})
 
     def update_state(self, kwargs):
-        best_schedule, best_cost = self.get_schedule_brute_force()
+        if self.get_state(self.input_boolean_name) == "off" or not ENABLED:
+            self.log("Automation is off or disabled. Do nothing.")
+            return
+        ret = benchmark_function(self.log, self.get_schedule_brute_force)
+        best_schedule, best_cost = ret
         if best_schedule:
-            self.log(f"Best schedule: {best_schedule}, Cost: {best_cost}")
+            self.log(f"Best schedule: {best_schedule}, Cost: {best_cost}, Horizon: {HORIZON}")
             self.print_schedule(best_schedule)
         else:
             self.log("No valid schedule found. Do nothing.")
