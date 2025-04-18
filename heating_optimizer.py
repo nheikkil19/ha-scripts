@@ -46,31 +46,14 @@ class HeatingOptimizer(GenericHeatingOptimizer):
 
         self.log(f"Selected program: {selected_name}")
         self.schedule = selected_schedule
-        self.print_schedule(self.schedule)
 
-        self.update_data(selected_schedule, selected_name, min_cost)
+        on_hours = self.get_on_hours(self.schedule)
+        self.print_schedule(on_hours)
+        self.update_optimizer_information(on_hours, self.__class__, selected_name, min_cost)
 
     def should_turn_on(self) -> bool:
         current_hour = self.get_datetime_now().hour
         return self.schedule[current_hour]
-
-    def print_schedule(self, schedule: list[bool]):
-        log_str = "On hours: "
-        for i, on in enumerate(schedule):
-            if on:
-                log_str += f"{i}, "
-        log_str = log_str[:-2]
-        self.log(log_str)
-
-    def update_data(self, schedule, name, total_cost):
-        sensor_name = self.config["optimizer_sensor"]
-        state = "on" if self.get_state(self.input_boolean_name) == "on" else "off"
-        on_hours = [i for i, on in enumerate(schedule) if on]
-        self.set_state(
-            sensor_name,
-            state=state,
-            attributes={"name": name, "total_cost": total_cost, "on_hours": on_hours},
-        )
 
     def get_programs(self, prices: list) -> list[BaseProgram]:
         programs = self.config["programs"]

@@ -19,6 +19,7 @@ HEATING_RATE = 0.1  # °C/h
 class MpcHeating(GenericHeatingOptimizer):
 
     def initialize(self):
+        self.cost = 0  # Keep track of the cost
         super().initialize()
 
     def update_state(self, kwargs):
@@ -27,14 +28,16 @@ class MpcHeating(GenericHeatingOptimizer):
             return
         ret = benchmark_function(self.log, self.get_schedule_brute_force)
         best_schedule, best_cost = ret
-        if best_schedule:
-            self.log(f"Best schedule: {best_schedule}, Cost: {best_cost}, Horizon: {HORIZON}")
-            self.print_schedule(best_schedule)
-        else:
+        if not best_schedule:
             self.log("No valid schedule found. Do nothing.")
             return
+        self.log(f"Best schedule: {best_schedule}, Cost: {best_cost}, Horizon: {HORIZON}")
+        on_hours = self.get_on_hours(best_schedule, offset=self.get_datetime_now().hour)
+        self.print_schedule(on_hours)
         # Turn on/off the switch based on the first hour of the schedule
         self.operate_switch(best_schedule[0])
+        self.update_cost(best_schedule[0])  # Update cost based on the first hour
+        self.update_optimizer_information(on_hours, self.__class__.__name__, f"MPC with Horizon {HORIZON}", self.cost)
 
     def get_schedule_brute_force(self) -> tuple[list[bool], float]:
         """Optimize MPC by brute force"""
@@ -66,11 +69,7 @@ class MpcHeating(GenericHeatingOptimizer):
                 best_schedule = schedule
         return best_schedule, best_cost
 
-    def print_schedule(self, schedule: list[bool]):
-        log_str = "On hours: "
-        current_hour = self.get_datetime_now().hour
-        for i, on in enumerate(schedule):
-            if on:
-                log_str += f"{(i + current_hour) % 24}, "
-        log_str = log_str[:-2]
-        self.log(log_str)
+    def update_cost(self, is_on: bool):
+        if self.get_datetime_now().hour == 0:
+            self.cost = 0
+        self.cost += self.config["cost_multiplier"] * is_on

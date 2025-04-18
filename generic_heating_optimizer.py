@@ -18,6 +18,7 @@ class GenericHeatingOptimizer(hass.Hass, ABC):
         self.heating_switch = self.config["heating_switch"]
         self.input_boolean_name = self.config["input_boolean_name"]
         self.price_sensor = self.config["price_sensor"]
+        self.optimizer_sensor = self.config["optimizer_sensor"]  # Sensor to store the selected program 
         self.prices_updated = datetime.min
         self.prices = []
         self.listen_state(self.automation_state_changed, self.input_boolean_name)
@@ -75,6 +76,25 @@ class GenericHeatingOptimizer(hass.Hass, ABC):
         else:
             self.log("Automation turned off")
             self.switch_turn_off()
+
+    def update_optimizer_information(self, on_hours: list[bool], optimizer_name: str, details: str, cost: float):
+        self.set_state(
+            self.optimizer_sensor,
+            state=optimizer_name,
+            attributes={"details": details, "cost": cost, "on_hours": on_hours},
+        )
+
+    def get_on_hours(self, schedule: list[bool], offset: int = 0) -> list[int]:
+        """Get the on hours of the schedule"""
+        on_hours = []
+        for i, on in enumerate(schedule):
+            if on:
+                on_hours.append((i + offset) % 24)
+        return on_hours
+
+    def print_schedule(self, on_hours: list[bool]):
+        log_str = "On hours: " + ", ".join([str(hour) for hour in on_hours])
+        self.log(log_str)
 
 
 def benchmark_function(logger, func, *args, **kwargs):
