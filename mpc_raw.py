@@ -1,0 +1,40 @@
+import cvxpy as cp
+import numpy as np
+
+# Problem data
+H = 24  # Prediction horizon (e.g., 24 hours)
+T_min, T_max = 20, 24  # Temperature bounds
+heating_rate = 0.5  # Temperature increase per hour when heating
+cooling_rate = 0.3  # Temperature decrease per hour when not heating
+price = np.random.rand(H)  # Electricity prices for the next 24 hours
+T_initial = 21  # Initial temperature
+
+
+# Variables
+def solve_mpc(H, T_min, T_max, heating_rate, cooling_rate, price, T_initial):
+    T = cp.Variable(H)  # Temperatures over the horizon
+    u = cp.Variable(H, boolean=True)  # Heating actions (binary: 0 or 1)
+
+    # Objective function: Minimize energy cost + comfort cost
+    cost = cp.sum(cp.multiply(price, u))  # Use elementwise multiplication
+
+    # Constraints
+    constraints = []
+    constraints += [T[0] == T_initial]  # Initial temperature
+    for t in range(H - 1):
+        # Next state is current state + heating if heating is on, -cooling if off
+        constraints += [T[t + 1] == T[t] + heating_rate * u[t] - cooling_rate * (1 - u[t])]
+    constraints += [T_min <= T, T <= T_max]  # Temperature bounds
+
+    # Solve the problem
+    prob = cp.Problem(cp.Minimize(cost), constraints)
+    result = prob.solve(solver=cp.GLPK_MI)  # Use a solver that supports mixed-integer programming
+
+    # Results
+    print("Optimal heating actions:", u.value)
+    print("Optimal temperatures:", T.value)
+    return T, u, result
+
+
+if __name__ == "__main__":
+    solve_mpc(H, T_min, T_max, heating_rate, cooling_rate, price, T_initial)

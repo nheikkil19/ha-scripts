@@ -48,10 +48,9 @@ class HeatingOptimizer(GenericHeatingOptimizer):
         self.schedule = selected_schedule
         self.cost = min_cost
 
-        on_hours = self.get_on_hours(self.schedule)
-        self.print_schedule(on_hours)
+        self.update_on_hours(self.schedule)
         if self.get_state(self.input_boolean_name) == "on" and ENABLED:  # TODO: Refactor updating state
-            self.update_optimizer_information(on_hours, self.__class__.__name__, selected_name)
+            self.update_optimizer_information(self.__class__.__name__, selected_name)
 
     def should_turn_on(self) -> bool:
         current_hour = get_datetime_now().hour

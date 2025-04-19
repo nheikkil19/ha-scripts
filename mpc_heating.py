@@ -1,6 +1,6 @@
 import itertools
-# import cvxpy as cp
-# import numpy as np
+from mpc_raw import solve_mpc
+import numpy as np
 
 from generic_heating_optimizer import GenericHeatingOptimizer, benchmark_function, get_datetime_now
 
@@ -10,7 +10,7 @@ from generic_heating_optimizer import GenericHeatingOptimizer, benchmark_functio
 
 ENABLED = True
 
-HORIZON = 18
+HORIZON = 24
 MIN_TEMP = 23
 MAX_TEMP = 27
 COOLING_RATE = 0.34  # °C/h
@@ -26,23 +26,20 @@ class MpcHeating(GenericHeatingOptimizer):
         if self.get_state(self.input_boolean_name) == "off" or not ENABLED:
             self.log("Automation is off or disabled. Do nothing.")
             return
-        ret = benchmark_function(self.log, self.get_schedule_brute_force)
-        best_schedule, best_cost = ret
-        if not best_schedule:
+        # action = self.get_next_action_brute_force()
+        action = self.get_next_action_cvxpy()
+        if action is None:
             self.log("No valid schedule found. Do nothing.")
             return
-        self.log(f"Best schedule: {best_schedule}, Cost: {best_cost}, Horizon: {HORIZON}")
-        on_hours = self.get_on_hours(best_schedule, offset=get_datetime_now().hour)
-        self.print_schedule(on_hours)
         # Turn on/off the switch based on the first hour of the schedule
-        self.operate_switch(best_schedule[0])
-        self.update_cost(best_schedule[0])  # Update cost based on the first hour
-        self.update_optimizer_information(on_hours, self.__class__.__name__, f"MPC with Horizon {HORIZON}")
+        self.operate_switch(action)
+        self.update_cost(action)  # Update cost based on the first hour
+        self.update_optimizer_information(self.__class__.__name__, f"MPC with Horizon {HORIZON}")
 
     def get_schedule_brute_force(self) -> tuple[list[bool], float]:
         """Optimize MPC by brute force"""
         current_temp = float(self.get_state(self.config["temperature_sensor"]))
-        prices = self.get_prices(tomorrow=True, tomorrow_default=[100] * 24)  # Default to high price if not available
+        prices = self.get_prices(tomorrow=True)  # Default to high price if not available
         current_hour = get_datetime_now().hour
         prices_from_now = prices[current_hour:current_hour + HORIZON]
 
@@ -69,3 +66,28 @@ class MpcHeating(GenericHeatingOptimizer):
                 best_schedule = schedule
         return best_schedule, best_cost
 
+    def get_next_action_brute_force(self) -> bool:
+        best_schedule, best_cost = benchmark_function(self.log, self.get_schedule_brute_force)
+        if not best_schedule:
+            return None
+        self.log(f"Best schedule: {best_schedule}, Cost: {best_cost}, Horizon: {HORIZON}")
+        self.update_on_hours(best_schedule, offset=get_datetime_now().hour)
+        action = best_schedule[0]
+        return action
+
+    def get_next_action_cvxpy(self):
+        prices = self.get_prices(tomorrow=True)
+        prices_from_now = prices[get_datetime_now().hour:get_datetime_now().hour + HORIZON]
+        prices_np = np.array(prices_from_now)
+        current_temp = float(self.get_state(self.config["temperature_sensor"]))
+        horizon = min(len(prices_np), HORIZON)
+        T, u, result = solve_mpc(horizon, MIN_TEMP, MAX_TEMP, HEATING_RATE, COOLING_RATE, prices_np, current_temp)
+        if result is None:
+            self.log("No valid schedule found. Do nothing.")
+            return None
+        action = u[0].value
+        schedule = u.value
+        self.update_on_hours(schedule, offset=get_datetime_now().hour)
+        self.log("Optimal heating actions:", u.value)
+        self.log("Optimal temperatures:", T.value)
+        return action
