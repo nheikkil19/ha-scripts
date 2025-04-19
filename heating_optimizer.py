@@ -1,6 +1,6 @@
 from datetime import time
 
-from generic_heating_optimizer import GenericHeatingOptimizer
+from generic_heating_optimizer import GenericHeatingOptimizer, get_datetime_now
 from programs import BaseProgram, Sections, TotalCheapest
 
 ENABLED = False
@@ -46,13 +46,15 @@ class HeatingOptimizer(GenericHeatingOptimizer):
 
         self.log(f"Selected program: {selected_name}")
         self.schedule = selected_schedule
+        self.cost = min_cost
 
         on_hours = self.get_on_hours(self.schedule)
         self.print_schedule(on_hours)
-        self.update_optimizer_information(on_hours, self.__class__.__name__, selected_name, min_cost)
+        if self.get_state(self.input_boolean_name) == "on" and ENABLED:  # TODO: Refactor updating state
+            self.update_optimizer_information(on_hours, self.__class__.__name__, selected_name)
 
     def should_turn_on(self) -> bool:
-        current_hour = self.get_datetime_now().hour
+        current_hour = get_datetime_now().hour
         return self.schedule[current_hour]
 
     def get_programs(self, prices: list) -> list[BaseProgram]:
