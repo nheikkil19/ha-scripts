@@ -49,7 +49,7 @@ class HeatingOptimizer(GenericHeatingOptimizer):
 
         on_hours = self.get_on_hours(self.schedule)
         self.print_schedule(on_hours)
-        self.update_optimizer_information(on_hours, self.__class__, selected_name, min_cost)
+        self.update_optimizer_information(on_hours, self.__class__.__name__, selected_name, min_cost)
 
     def should_turn_on(self) -> bool:
         current_hour = self.get_datetime_now().hour

@@ -61,7 +61,8 @@ class GenericHeatingOptimizer(hass.Hass, ABC):
                 self.prices = self.get_state(self.price_sensor, attribute="today")
                 if self.prices != self.yesterday_prices:  # Prices have changed
                     if tomorrow:
-                        self.prices += self.get_state(self.price_sensor, attribute="tomorrow", default=tomorrow_default)
+                        tomorrow_prices = self.get_state(self.price_sensor, attribute="tomorrow")
+                        self.prices += tomorrow_prices if len(tomorrow_prices) == 24 else tomorrow_default
                     self.prices_updated = self.get_datetime_now()
                     self.log(f"New prices: {self.prices}")
                     return self.prices

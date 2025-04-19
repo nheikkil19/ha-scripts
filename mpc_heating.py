@@ -1,5 +1,6 @@
 import itertools
-from datetime import time
+# import cvxpy as cp
+# import numpy as np
 
 from generic_heating_optimizer import GenericHeatingOptimizer, benchmark_function
 
@@ -10,10 +11,10 @@ from generic_heating_optimizer import GenericHeatingOptimizer, benchmark_functio
 ENABLED = True
 
 HORIZON = 18
-MIN_TEMP = 22
-MAX_TEMP = 25
-COOLING_RATE = 0.2  # °C/h
-HEATING_RATE = 0.1  # °C/h
+MIN_TEMP = 23
+MAX_TEMP = 27
+COOLING_RATE = 0.34  # °C/h
+HEATING_RATE = 0.44  # °C/h
 
 
 class MpcHeating(GenericHeatingOptimizer):
