@@ -47,19 +47,25 @@ class GenericHeatingOptimizer(hass.Hass, ABC):
         self.prices_updated = datetime.min
         self.prices = []
         self.active_time = ActiveTime(self.get_state(self.optimizer_sensor, attribute="active_time", default="0h"))
-        self.cost = self.get_state(self.optimizer_sensor, attribute="cost", default=0)
+        self.cost = 0
         self.on_hours = []
+        self.details = ""
+        self.optimizer = self.__class__.__name__
         self.listen_state(self.automation_state_changed, self.input_boolean_name)
 
         self.run_hourly(self.do_hourly_update, start=self.start)
         self.do_hourly_update({})
 
     def do_hourly_update(self, kwargs):
-        self.update_state()
+        action = self.update_state()
         # Call e.g. update cost or other info here
+        if action is not None:
+            self.update_cost(action)
+            self.active_time.update(hours=1)
+            self.update_optimizer_information()
 
     @abstractmethod
-    def update_state(self):
+    def update_state(self) -> bool:
         pass
 
     def is_automation_on(self) -> bool:
@@ -107,13 +113,13 @@ class GenericHeatingOptimizer(hass.Hass, ABC):
             self.log("Automation turned off")
             self.switch_turn_off()
 
-    def update_optimizer_information(self, optimizer_name: str, details: str):
+    def update_optimizer_information(self):
         self.print_on_hours()
         self.set_state(
             self.optimizer_sensor,
-            state=optimizer_name,
+            state=self.optimizer,
             attributes={
-                "details": details,
+                "details": self.details,
                 "cost": self.cost,
                 "on_hours": self.on_hours,
                 "active_time": self.active_time.get_active_time_string(),
@@ -121,7 +127,6 @@ class GenericHeatingOptimizer(hass.Hass, ABC):
         )
 
     def update_on_hours(self, schedule: list[bool], offset: int = 0):
-        """Get the on hours of the schedule"""
         self.on_hours = []
         for i, on in enumerate(schedule):
             if on:
@@ -132,9 +137,15 @@ class GenericHeatingOptimizer(hass.Hass, ABC):
         self.log(log_str)
 
     def update_cost(self, is_on: bool):
-        if get_datetime_now().hour == 0:
+        hour = get_datetime_now().hour
+        if hour == 0:
             self.cost = 0
-        self.cost += self.config["cost_multiplier"] * is_on
+        self.cost += is_on * self.calculate_real_price(self.prices[hour]) / 100  # Convert to euros
+
+    def calculate_real_price(self, price: float) -> float:
+        multiplier = self.config.get("cost_multiplier", 1)
+        offset = self.config.get("offset", 0)
+        return (price + offset) * multiplier
 
 
 def benchmark_function(logger, func, *args, **kwargs):

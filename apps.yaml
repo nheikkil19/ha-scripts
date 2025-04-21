@@ -1,6 +1,6 @@
-heating_optimizer:
-  module: heating_optimizer
-  class: HeatingOptimizer
+# heating_optimizer:
+#   module: heating_optimizer
+#   class: HeatingOptimizer
 
 
 presence_detection:

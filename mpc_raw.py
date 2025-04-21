@@ -11,7 +11,9 @@ T_initial = 21  # Initial temperature
 
 
 # Variables
-def solve_mpc(H: int, T_min: float, T_max: float, heating_rate: float, cooling_rate: float, price_list: list, T_initial: float) -> tuple[list, list]:
+def solve_mpc(
+    H: int, T_min: float, T_max: float, heating_rate: float, cooling_rate: float, price_list: list, T_initial: float
+) -> list:
     T = cp.Variable(H)  # Temperatures over the horizon
     u = cp.Variable(H, boolean=True)  # Heating actions (binary: 0 or 1)
     price = np.array(price_list)
@@ -29,12 +31,9 @@ def solve_mpc(H: int, T_min: float, T_max: float, heating_rate: float, cooling_r
 
     # Solve the problem
     prob = cp.Problem(cp.Minimize(cost), constraints)
-    result = prob.solve(solver=cp.GLPK_MI)  # Use a solver that supports mixed-integer programming
+    prob.solve(solver=cp.GLPK_MI)  # Use a solver that supports mixed-integer programming
 
-    # Results
-    print("Optimal heating actions:", u.value)
-    print("Optimal temperatures:", T.value)
-    return T.value.tolist(), u.value.tolist()
+    return u.value.tolist()
 
 
 if __name__ == "__main__":
