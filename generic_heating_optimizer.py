@@ -51,11 +51,15 @@ class GenericHeatingOptimizer(hass.Hass, ABC):
         self.on_hours = []
         self.listen_state(self.automation_state_changed, self.input_boolean_name)
 
-        self.run_hourly(self.update_state, start=self.start)
-        self.update_state({})
+        self.run_hourly(self.do_hourly_update, start=self.start)
+        self.do_hourly_update({})
+
+    def do_hourly_update(self, kwargs):
+        self.update_state()
+        # Call e.g. update cost or other info here
 
     @abstractmethod
-    def update_state(self, kwargs):
+    def update_state(self):
         pass
 
     def is_automation_on(self) -> bool:

@@ -18,7 +18,7 @@ class HeatingOptimizer(GenericHeatingOptimizer):
             constrain_input_boolean=self.input_boolean_name,
         )
 
-    def update_state(self, kwargs):
+    def update_state(self):
         if self.get_state(self.input_boolean_name) == "off" or not ENABLED:
             self.log("Automation is off or disabled. Do nothing.")
             return

@@ -1,6 +1,5 @@
 import itertools
 from mpc_raw import solve_mpc
-import numpy as np
 
 from generic_heating_optimizer import GenericHeatingOptimizer, benchmark_function, get_datetime_now
 
@@ -13,8 +12,8 @@ ENABLED = True
 HORIZON = 24
 MIN_TEMP = 23
 MAX_TEMP = 27
-COOLING_RATE = 0.34  # °C/h
-HEATING_RATE = 0.44  # °C/h
+COOLING_RATE = 0.25  # °C/h
+HEATING_RATE = 0.6  # °C/h
 
 
 class MpcHeating(GenericHeatingOptimizer):
@@ -22,7 +21,7 @@ class MpcHeating(GenericHeatingOptimizer):
     def initialize(self):
         super().initialize()
 
-    def update_state(self, kwargs):
+    def update_state(self):
         if self.get_state(self.input_boolean_name) == "off" or not ENABLED:
             self.log("Automation is off or disabled. Do nothing.")
             return
@@ -33,7 +32,7 @@ class MpcHeating(GenericHeatingOptimizer):
             return
         # Turn on/off the switch based on the first hour of the schedule
         self.operate_switch(action)
-        self.update_cost(action)  # Update cost based on the first hour
+        # self.update_cost(action)  # Update cost based on the first hour
         self.update_optimizer_information(self.__class__.__name__, f"MPC with Horizon {HORIZON}")
 
     def get_schedule_brute_force(self) -> tuple[list[bool], float]:
@@ -78,16 +77,15 @@ class MpcHeating(GenericHeatingOptimizer):
     def get_next_action_cvxpy(self):
         prices = self.get_prices(tomorrow=True)
         prices_from_now = prices[get_datetime_now().hour:get_datetime_now().hour + HORIZON]
-        prices_np = np.array(prices_from_now)
         current_temp = float(self.get_state(self.config["temperature_sensor"]))
-        horizon = min(len(prices_np), HORIZON)
-        T, u, result = solve_mpc(horizon, MIN_TEMP, MAX_TEMP, HEATING_RATE, COOLING_RATE, prices_np, current_temp)
-        if result is None:
+        horizon = min(len(prices_from_now), HORIZON)
+        T, u = solve_mpc(horizon, MIN_TEMP, MAX_TEMP, HEATING_RATE, COOLING_RATE, prices_from_now, current_temp)
+        if not u:
             self.log("No valid schedule found. Do nothing.")
             return None
-        action = u[0].value
-        schedule = u.value
+        action = u[0]
+        schedule = u
         self.update_on_hours(schedule, offset=get_datetime_now().hour)
-        self.log("Optimal heating actions:", u.value)
-        self.log("Optimal temperatures:", T.value)
+        self.log("Optimal heating actions:", u)
+        self.log("Optimal temperatures:", T)
         return action
