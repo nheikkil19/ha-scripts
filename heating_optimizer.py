@@ -3,8 +3,6 @@ from datetime import time
 from generic_heating_optimizer import GenericHeatingOptimizer, get_datetime_now
 from programs import BaseProgram, Sections, TotalCheapest
 
-ENABLED = False
-
 
 class HeatingOptimizer(GenericHeatingOptimizer):
 
@@ -19,10 +17,6 @@ class HeatingOptimizer(GenericHeatingOptimizer):
         )
 
     def update_state(self):
-        if self.get_state(self.input_boolean_name) == "off" or not ENABLED:
-            self.log("Automation is off or disabled. Do nothing.")
-            return
-
         self.select_daily_program({})  # In case update was not successful earlier
         if self.should_turn_on() and self.get_state(self.input_boolean_name) == "on":
             self.switch_turn_on()

@@ -6,8 +6,6 @@ import appdaemon.plugins.hass.hassapi as hass
 import pytz
 from config import TIME_ZONE, get_heating_optimizer_config
 
-# TODO: Implement selecting between optimizers and making disabling global
-
 
 class ActiveTime:
     def __init__(self, hour_min_string: str):
@@ -57,7 +55,8 @@ class GenericHeatingOptimizer(hass.Hass, ABC):
         self.do_hourly_update({})
 
     def do_hourly_update(self, kwargs):
-        action = self.update_state()
+        if self.get_state(self.input_boolean_name) == "on":
+            action = self.update_state()
         # Call e.g. update cost or other info here
         if action is not None:
             self.update_cost(action)
@@ -90,19 +89,19 @@ class GenericHeatingOptimizer(hass.Hass, ABC):
         self.operate_switch(False)
 
     def get_prices(self, tomorrow: bool = False) -> list:
-        if self.prices_updated.date() != get_datetime_now().date():
+        if self.prices_updated.date() != get_datetime_now().date():  # Get new prices when the day changes
             self.yesterday_prices = self.prices[:24]  # Used to check if prices are updated. Use only one day prices
             for _ in range(10):  # Set a limit to the number of attempts
                 self.prices = self.get_state(self.price_sensor, attribute="today")
                 if self.prices != self.yesterday_prices:  # Prices have changed
-                    if tomorrow:
-                        tomorrow_prices = self.get_state(self.price_sensor, attribute="tomorrow")
-                        self.prices += tomorrow_prices if len(tomorrow_prices) == 24 else []  # self.prices
                     self.prices_updated = get_datetime_now()
-                    self.log(f"New prices: {self.prices}")
-                    return self.prices
+                    break
                 sleep(1)  # Wait for 1 second before trying again
             self.error("Failed to get new prices after maximum attempts")
+        if tomorrow:
+            tomorrow_prices = self.get_state(self.price_sensor, attribute="tomorrow")
+            self.prices += tomorrow_prices if len(tomorrow_prices) == 24 else []
+        self.log(f"New prices: {self.prices}")
         return self.prices
 
     def automation_state_changed(self, entity, attribute, old, new, kwargs):
