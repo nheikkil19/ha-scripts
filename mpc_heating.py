@@ -34,10 +34,20 @@ class MpcHeating(GenericHeatingOptimizer):
 
         # Update horizon
         horizon = min(len(real_prices), HORIZON)
-        self.set_mpc_details()
-        # Update temp and call solver
+        self.set_mpc_details(horizon)
+        # Get MPC parameters
+        min_temp = self.get_float_from_mpc_sensor("mpc_min_temp", MIN_TEMP)
+        max_temp = self.get_float_from_mpc_sensor("mpc_max_temp", MAX_TEMP)
+        heating_rate = self.get_float_from_mpc_sensor("mpc_heating_rate", HEATING_RATE)
+        cooling_rate = self.get_float_from_mpc_sensor("mpc_cooling_rate", COOLING_RATE)
+        self.log(
+            "Using MPC with min_temp: {}, max_temp: {}, heating_rate: {}, cooling_rate: {}".format(
+                min_temp, max_temp, heating_rate, cooling_rate
+            )
+        )
+        # Get current temperature
         current_temp = float(self.get_state(self.config["temperature_sensor"]))
-        u = solve_mpc(horizon, MIN_TEMP, MAX_TEMP, HEATING_RATE, COOLING_RATE, real_prices, current_temp)
+        u = solve_mpc(horizon, min_temp, max_temp, heating_rate, cooling_rate, real_prices, current_temp)
 
         if not u:
             return None
@@ -49,3 +59,11 @@ class MpcHeating(GenericHeatingOptimizer):
 
     def set_mpc_details(self, horizon: int = HORIZON):
         self.details = "MPC with Horizon " + str(horizon)
+
+    def get_float_from_mpc_sensor(self, sensor_name: str, default: float = 0.0) -> float:
+        sensor = self.config.get(sensor_name, None)
+        if sensor is not None:
+            value: str = self.get_state(sensor, default=default)
+            value = float(value.replace(",", "."))
+            return value
+        return default

@@ -19,6 +19,7 @@ class GenericHeatingOptimizer(hass.Hass, ABC):
         self.optimizer_sensor = self.config["optimizer_sensor"]  # Sensor to store the selected program
         self.prices_updated = datetime.min
         self.prices = []
+        self.yesterday_prices = []
         self.last_stats_update = get_datetime_now()
         self.last_switch_state = self.get_switch_state()
         self.last_active_seconds = 0
@@ -31,7 +32,11 @@ class GenericHeatingOptimizer(hass.Hass, ABC):
         self.run_hourly(self.do_hourly_update, start=self.start)
         self.do_hourly_update({})
 
-        self.run_every(self.update_optimizer_information, start=get_datetime_now().replace(hour=0, minute=0, second=0, microsecond=0), interval=5 * 60)
+        self.run_every(
+            self.update_optimizer_information,
+            start="now",
+            interval=5 * 60,
+        )
         self.update_optimizer_information({})
 
     def do_hourly_update(self, kwargs):
@@ -67,6 +72,7 @@ class GenericHeatingOptimizer(hass.Hass, ABC):
         self.operate_switch(False)
 
     def get_prices(self, tomorrow: bool = False) -> list:
+        self.log(f"Last updated prices: {self.prices_updated}")
         if self.prices_updated.date() != get_datetime_now().date():  # Get new prices when the day changes
             self.yesterday_prices = self.prices[:24]  # Used to check if prices are updated. Use only one day prices
             for _ in range(10):  # Set a limit to the number of attempts
@@ -92,6 +98,11 @@ class GenericHeatingOptimizer(hass.Hass, ABC):
 
     def update_optimizer_information(self, kwargs):
         now = day_start = get_datetime_now()
+        if now.date() != self.last_stats_update.date():
+            self.log("New day started, resetting stats")
+            self.cost = 0
+            self.last_active_seconds = 0
+
         if self.last_switch_state:
             day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
             last_update_or_day = max(self.last_stats_update, day_start)
@@ -110,7 +121,6 @@ class GenericHeatingOptimizer(hass.Hass, ABC):
 
         self.last_stats_update = now
 
-        self.print_on_hours()
         self.set_state(
             self.optimizer_sensor,
             state=self.optimizer,
@@ -159,3 +169,10 @@ def benchmark_function(logger, func, *args, **kwargs):
 
 def get_datetime_now():
     return datetime.now(tz=pytz.timezone(TIME_ZONE))
+
+
+def get_next_n_minutes(n: int = 5):
+    now = get_datetime_now()
+    minutes = now.minute // n * (n + 1)
+
+    return now.replace(minute=minutes, second=0, microsecond=0)
