@@ -1,14 +1,6 @@
 import cvxpy as cp
 import numpy as np
 
-# Problem data
-H = 24  # Prediction horizon (e.g., 24 hours)
-T_min, T_max = 20, 24  # Temperature bounds
-heating_rate = 0.5  # Temperature increase per hour when heating
-cooling_rate = 0.3  # Temperature decrease per hour when not heating
-price = np.random.rand(H)  # Electricity prices for the next 24 hours
-T_initial = 21  # Initial temperature
-
 
 # Variables
 def solve_mpc(
@@ -37,4 +29,12 @@ def solve_mpc(
 
 
 if __name__ == "__main__":
+    # Problem data
+    H = 24  # Prediction horizon (e.g., 24 hours)
+    T_min, T_max = 20, 24  # Temperature bounds
+    heating_rate = 0.5  # Temperature increase per hour when heating
+    cooling_rate = 0.3  # Temperature decrease per hour when not heating
+    price = np.random.rand(H)  # Electricity prices for the next 24 hours
+    T_initial = 21  # Initial temperature
+
     solve_mpc(H, T_min, T_max, heating_rate, cooling_rate, price, T_initial)

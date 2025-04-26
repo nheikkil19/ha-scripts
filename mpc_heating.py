@@ -6,7 +6,7 @@ from mpc_raw import solve_mpc
 # - Add daily cost
 
 HORIZON = 32
-MIN_TEMP = 22
+MIN_TEMP = 23
 MAX_TEMP = 27
 COOLING_RATE = 0.25  # °C/h
 HEATING_RATE = 0.6  # °C/h
@@ -47,8 +47,14 @@ class MpcHeating(GenericHeatingOptimizer):
         )
         # Get current temperature
         current_temp = float(self.get_state(self.config["temperature_sensor"]))
-        u = solve_mpc(horizon, min_temp, max_temp, heating_rate, cooling_rate, real_prices, current_temp)
-
+        if current_temp < min_temp:
+            self.log("Current temperature is below minimum. Force heating on.")
+            u = [1]
+        elif max_temp < current_temp:
+            self.log("Current temperature is above maximum. Force heating off.")
+            u = [0]
+        else:
+            u = solve_mpc(horizon, min_temp, max_temp, heating_rate, cooling_rate, real_prices, current_temp)
         if not u:
             return None
         action = u[0]
