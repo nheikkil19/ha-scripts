@@ -3,7 +3,6 @@ from mpc_raw import solve_mpc
 
 # Ideas for improvement:
 # - Update every 15 minutes
-# - Add daily cost
 
 HORIZON = 32
 MIN_TEMP = 23
@@ -47,6 +46,7 @@ class MpcHeating(GenericHeatingOptimizer):
         )
         # Get current temperature
         current_temp = float(self.get_state(self.config["temperature_sensor"]))
+        self.log(f"Current temp: {current_temp} degree C")
         if current_temp < min_temp:
             self.log("Current temperature is below minimum. Force heating on.")
             u = [1]

@@ -81,8 +81,11 @@ class GenericHeatingOptimizer(hass.Hass, ABC):
                     self.prices_updated = get_datetime_now()
                     break
                 sleep(1)  # Wait for 1 second before trying again
-            self.error("Failed to get new prices after maximum attempts")
-        if tomorrow:
+
+            if self.prices == self.yesterday_prices:
+                self.error("Failed to get new prices after maximum attempts")
+
+        if tomorrow and len(self.prices) == 24:
             tomorrow_prices = self.get_state(self.price_sensor, attribute="tomorrow")
             self.prices += tomorrow_prices if len(tomorrow_prices) == 24 else []
         self.log(f"New prices: {self.prices}")
@@ -91,13 +94,13 @@ class GenericHeatingOptimizer(hass.Hass, ABC):
     def automation_state_changed(self, entity, attribute, old, new, kwargs):
         if new == "on":
             self.log("Automation turned on")
-            self.update_state({})
+            self.update_state()
         else:
             self.log("Automation turned off")
             self.switch_turn_off()
 
     def update_optimizer_information(self, kwargs):
-        now = day_start = get_datetime_now()
+        now = get_datetime_now()
         if now.date() != self.last_stats_update.date():
             self.log("New day started, resetting stats")
             self.cost = 0
@@ -112,14 +115,14 @@ class GenericHeatingOptimizer(hass.Hass, ABC):
 
             cost = seconds * self.calculate_real_price(self.prices[now.hour]) / 3600
             self.cost += cost
-            self.last_switch_state = self.get_switch_state()
 
         hours = self.last_active_seconds // 3600
         minutes = self.last_active_seconds % 3600 // 60
         active_time = f"{hours:.0f} h {minutes:.0f} min"
-        cost_string = f"{self.cost:.6f} snt"
+        cost_string = f"{self.cost:.1f} snt"
 
         self.last_stats_update = now
+        self.last_switch_state = self.get_switch_state()
 
         self.set_state(
             self.optimizer_sensor,
@@ -155,7 +158,7 @@ class GenericHeatingOptimizer(hass.Hass, ABC):
         return (price + offset) * multiplier
 
     def get_switch_state(self) -> bool:
-        return self.get_state(self.heating_switch, default=False) == "on"
+        return self.get_state(self.heating_switch, default="off") == "on"
 
 
 def benchmark_function(logger, func, *args, **kwargs):
