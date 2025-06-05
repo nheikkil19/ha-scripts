@@ -30,6 +30,7 @@ class MpcHeating(GenericHeatingOptimizer):
         prices = self.get_prices(tomorrow=True)
         prices_from_now = prices[get_datetime_now().hour:get_datetime_now().hour + HORIZON]
         real_prices = [self.calculate_real_price(price) for price in prices_from_now]
+        self.log(f"Real prices: {[round(x, 3) for x in real_prices]}")
 
         # Update horizon
         horizon = min(len(real_prices), HORIZON)
@@ -40,9 +41,8 @@ class MpcHeating(GenericHeatingOptimizer):
         heating_rate = self.get_float_from_mpc_sensor("mpc_heating_rate", HEATING_RATE)
         cooling_rate = self.get_float_from_mpc_sensor("mpc_cooling_rate", COOLING_RATE)
         self.log(
-            "Using MPC with min_temp: {}, max_temp: {}, heating_rate: {}, cooling_rate: {}".format(
-                min_temp, max_temp, heating_rate, cooling_rate
-            )
+            f"Using MPC with min_temp: {min_temp}, max_temp: {max_temp}, heating_rate: {heating_rate}, "
+            f"cooling_rate: {cooling_rate}, horizon: {horizon}"
         )
         # Get current temperature
         current_temp = float(self.get_state(self.config["temperature_sensor"]))
@@ -73,3 +73,6 @@ class MpcHeating(GenericHeatingOptimizer):
             value = float(value.replace(",", "."))
             return value
         return default
+
+
+# Continue from stash
