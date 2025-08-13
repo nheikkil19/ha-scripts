@@ -42,9 +42,11 @@ class GenericHeatingOptimizer(hass.Hass, ABC):
     def do_hourly_update(self, kwargs):
         if self.get_state(self.input_boolean_name) == "on":
             action = self.update_state()
-        # Call e.g. update cost or other info here
-        if action is not None:
-            self.operate_switch(action)
+            # Call e.g. update cost or other info here
+            if action is not None:
+                self.operate_switch(action)
+        else:
+            self.operate_switch(False)
 
     @abstractmethod
     def update_state(self) -> bool:
