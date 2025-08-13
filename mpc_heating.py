@@ -3,6 +3,7 @@ from mpc_raw import solve_mpc
 
 # Ideas for improvement:
 # - Update every 15 minutes
+# - Add override boolean. If boolean is on, script will not change the state. State is controlled by other automation.
 
 HORIZON = 32
 MIN_TEMP = 23
