@@ -10,3 +10,7 @@ presence_detection:
 mpc_heating:
   module: mpc_heating
   class: MpcHeating
+
+heating_rate_updater:
+  module: heating_rate_updater
+  class: HeatingRateUpdater
