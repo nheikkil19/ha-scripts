@@ -1,3 +1,7 @@
+"""
+Solves MPC (Model Predictive Control) for heating optimization.
+"""
+
 import cvxpy as cp
 import numpy as np
 

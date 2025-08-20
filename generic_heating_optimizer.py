@@ -1,3 +1,9 @@
+"""
+Defines the GenericHeatingOptimizer base class for heating control automation.
+Handles state updates, cost calculations, and integration with Home Assistant.
+Intended to be subclassed for specific heating optimization strategies.
+"""
+
 from abc import ABC, abstractmethod
 from datetime import datetime, time
 from time import sleep

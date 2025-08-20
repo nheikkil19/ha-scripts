@@ -1,9 +1,16 @@
+"""
+This module defines the MpcHeating class, which implements a model predictive control (MPC) strategy
+for optimizing heating based on electricity prices and temperature constraints.
+Calls `solve_mpc` from mpc_raw.py to compute the heating schedule.
+
+Ideas for improvement:
+    - Update every 15 minutes
+    - Add override boolean. If boolean is on, script will not change the state. State is controlled by other automation.
+"""
+
 from generic_heating_optimizer import GenericHeatingOptimizer, get_datetime_now
 from mpc_raw import solve_mpc
 
-# Ideas for improvement:
-# - Update every 15 minutes
-# - Add override boolean. If boolean is on, script will not change the state. State is controlled by other automation.
 
 HORIZON = 32
 MIN_TEMP = 23
