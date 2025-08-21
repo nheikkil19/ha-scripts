@@ -16,7 +16,7 @@ HORIZON = 32
 MIN_TEMP = 23
 MAX_TEMP = 27
 COOLING_RATE = 0.25  # °C/h
-HEATING_RATE = 0.6  # °C/h
+HEATING_RATE = -0.6  # °C/h
 
 
 class MpcHeating(GenericHeatingOptimizer):

@@ -21,8 +21,8 @@ def solve_mpc(
     constraints = []
     constraints += [T[0] == T_initial]  # Initial temperature
     for t in range(H - 1):
-        # Next state is current state + heating if heating is on, -cooling if off
-        constraints += [T[t + 1] == T[t] + heating_rate * u[t] - cooling_rate * (1 - u[t])]
+        # Next state is current state + heating if heating is on, + cooling if off
+        constraints += [T[t + 1] == T[t] + heating_rate * u[t] + cooling_rate * (1 - u[t])]
     constraints += [T_min <= T, T <= T_max]  # Temperature bounds
 
     # Solve the problem
@@ -34,11 +34,11 @@ def solve_mpc(
 
 if __name__ == "__main__":
     # Problem data
-    H = 24  # Prediction horizon (e.g., 24 hours)
+    H = 26  # Prediction horizon (e.g., 24 hours)
     T_min, T_max = 20, 24  # Temperature bounds
     heating_rate = 0.5  # Temperature increase per hour when heating
-    cooling_rate = 0.3  # Temperature decrease per hour when not heating
+    cooling_rate = -0.3  # Temperature decrease per hour when not heating
     price = np.random.rand(H)  # Electricity prices for the next 24 hours
     T_initial = 21  # Initial temperature
 
-    solve_mpc(H, T_min, T_max, heating_rate, cooling_rate, price, T_initial)
+    print(solve_mpc(H, T_min, T_max, heating_rate, cooling_rate, price, T_initial))
